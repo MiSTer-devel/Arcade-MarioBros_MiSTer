@@ -161,14 +161,15 @@ localparam CONF_STR = {
 wire clk_sys;
 wire clk_sub;
 wire clk_main;
-
+wire clk_48;
 pll pll
 (
    .refclk(CLK_50M),
    .rst(0),
-   .outclk_0(clk_sys),  // 24 Mhz
-   .outclk_1(clk_sub),  // 11 Mhz
-   .outclk_2(clk_main)  //  4 Mhz
+	.outclk_0(clk_48),
+   .outclk_1(clk_sys),  // 24 Mhz
+   .outclk_2(clk_sub),  // 11 Mhz
+   .outclk_3(clk_main)  //  4 Mhz
 );
 
 ///////////////////////////////////////////////////
@@ -262,7 +263,7 @@ arcade_video#(256,8) arcade_video
 (
    .*,
 
-   .clk_video(clk_sys),
+   .clk_video(clk_48),
    .ce_pix(ce_vid),
 
    .RGB_in({r,g,b}),
