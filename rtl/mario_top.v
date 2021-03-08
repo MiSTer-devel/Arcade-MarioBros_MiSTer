@@ -8,9 +8,7 @@
 
 module mario_top
 (
-   input         I_CLK_24M,
-   input         I_CLK_4M,
-   input         I_CLK_11M,
+   input         I_CLK_48M,
    input         I_RESETn,
 
    input    [3:0]I_ANLG_VOL,
@@ -38,15 +36,61 @@ wire   W_RESETn      = I_RESETn;
 wire   W_CPU_RESETn  = W_RESETn;
 
 //-----------------
-// Clocks / Timing
+// Clocks
 //-----------------
+wire W_CLK_48M = I_CLK_48M;
 
-wire        W_CLK_24M = I_CLK_24M;
-wire        W_CLK_12M;
-wire        WB_CLK_12M;
-wire        WB_CLK_6M;
-wire        W_CPU_CLK;
+wire cen24p, cen24n, cen12p, cen12n, cen11, cen6, cen4p, cen4n;
 
+reg [2:0] div8;
+
+always @(posedge W_CLK_48M) begin
+   div8 <= div8 + 1'd1;
+end
+
+assign  cen24p = div8[0];
+assign  cen24n = ~div8[0];
+assign  cen12p = div8[0] & div8[1];
+assign  cen12n = div8[0] & ~div8[1];
+assign  cen6   = div8 == 0;
+
+reg [3:0] div12;
+
+always @(posedge W_CLK_48M) begin
+   div12 <= div12 + 1'd1;
+   if (div12 == 4'd11) begin
+     div12 <= 0;
+   end
+end
+
+assign cen4p = div12 == 0;
+assign cen4n = div12 == 6;
+
+reg [2:0] div8b;
+reg [2:0] div5;
+reg       flip;
+
+always @(posedge W_CLK_48M) begin
+   if (flip) begin
+      div8b <= div8b + 1'd1;
+      if (div8b == 7) begin
+         flip <= 1'b0;
+         div5 <= 0;
+      end
+   end else begin
+      div5 <= div5 + 1'd1;
+      if (div5 == 4) begin
+         flip <= 1'b1;
+         div8b <= 0;
+      end
+   end
+end
+
+assign cen11 = flip ? (div8b == 0 || div8b == 4) : (div5 == 0);
+
+//-----------------
+// Video timing
+//-----------------
 wire   [9:0]W_H_CNT;
 wire   [7:0]W_V_CNT;
 wire   [7:0]W_VF_CNT;
@@ -59,11 +103,11 @@ wire        W_VCKn;
 
 mario_hv_generator hv
 (
-   .I_CLK(W_CLK_24M),
+   .I_CLK(W_CLK_48M),
+   .I_CEN(cen12n),
    .I_RST_n(W_RESETn),
    .I_VFLIP(W_FLIP_HV),
 
-   .O_CLK(W_CLK_12M),
    .H_CNT(W_H_CNT),
    .V_CNT(W_V_CNT), // Not used
    .VF_CNT(W_VF_CNT),
@@ -81,18 +125,6 @@ assign O_HBLANK      = ~W_HBLANKn;
 assign O_VBLANK      = ~W_VBLANKn;
 assign O_VGA_HSYNCn  = W_HSYNCn;
 assign O_VGA_VSYNCn  = W_VSYNCn;
-
-reg cen6, cen12;
-reg [1:0] cnt2 ='d0;
-
-always @(posedge W_CLK_24M) begin
-
-    cnt2  <= cnt2 + 2'd1;
-    
-    cen12 <= ~cnt2[0];         // 12 MHz
-    cen6  <= cnt2 == 2'b01;    // 6 MHz
-
-end
 
 //-----------------------------------------
 // Main CPU 
@@ -122,9 +154,10 @@ wire   [7:0]W_7J_Q;
 
 mario_main maincpu
 (
-   .I_CLK_24M(I_CLK_24M),
-   .I_CLK_12M(W_CLK_12M),
-   .I_MCPU_CLK(I_CLK_4M),
+   .I_CLK_48M(I_CLK_48M),
+   .I_CEN_12M(cen12p),
+   .I_MCPU_CEN4Mp(cen4p),
+   .I_MCPU_CEN4Mn(cen4n),
    .I_MCPU_RESETn(W_CPU_RESETn),
    .I_VRAMBUSY_n(W_VRAMBUSYn),
    .I_VBLK_n(W_VBLANKn),
@@ -169,10 +202,11 @@ wire  [1:0]W_B;
 
 mario_video vid
 (
-   .I_CLK_24M(I_CLK_24M),
-   .I_CLK_12M(W_CLK_12M),
-   .I_CEN12(cen12),
-   .I_CEN6(cen6),
+   .I_CLK_48M(I_CLK_48M),
+   .I_CEN_24Mp(cen24p),
+   .I_CEN_24Mn(cen24n),
+   .I_CEN_12M(cen12p),
+   .I_CEN_6M(cen6),
    .I_RESETn(W_RESETn),
    .I_CPU_A(W_MCPU_A[9:0]),
    .I_CPU_D(WI_D),
@@ -215,9 +249,9 @@ wire signed [15:0]W_SND_OUT;
 
 mario_sound sound
 (
-   .I_CLK_24M(I_CLK_24M),
-   .I_CLK_12M(W_CLK_12M),
-   .I_CLK_11M(I_CLK_11M),
+   .I_CLK_48M(I_CLK_48M),
+   .I_CEN_12M(cen12p),
+   .I_CEN_11M(cen11),
    .I_RESETn(W_RESETn),
    .I_SND_DATA(W_7J_Q),
    .I_SND_CTRL({W_4C_Q[1:0],W_7M_Q}),

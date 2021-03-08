@@ -19,8 +19,9 @@
 //-----------------------------------------------------------------------------------------
 
 module mario_vram(
-
-   input        I_CLK_24M,
+   input        I_CLK_48M,
+   input        I_CEN_24Mp,
+   input        I_CEN_24Mn,
    input   [9:0]I_AB,
    input   [7:0]I_DB,
    input        I_VRAM_WRn,
@@ -52,22 +53,22 @@ reg    [7:0]W_1E_Q;
 reg    [7:0]W_1AC_Q;
 wire   [7:0]W_1BD_Q = W_1E_Q[7:0]^{8{I_FLIP}};
 
-always@(negedge I_CLK_24M)
+always@(posedge I_CLK_48M)
 begin
+   if (I_CEN_24Mn) begin
+      reg VCKnp, VBLKnp, VMOVp;
+      VCKnp  <= I_VCKn;
+      VBLKnp <= I_VBLKn;
+      VMOVp  <= I_VMOV;
 
-   reg VCKnp, VBLKnp, VMOVp;
-   VCKnp  <= I_VCKn;
-   VBLKnp <= I_VBLKn;
-   VMOVp  <= I_VMOV;
-
-   if(I_VMOV && !VMOVp) W_1E_Q <= I_DB;
-   
-   if(I_VBLKn && !VBLKnp)
-      W_1AC_Q <= W_1BD_Q; // Load
-   else
-      if(!VCKnp && I_VCKn)
-         W_1AC_Q <= W_1AC_Q + 8'd1;
-
+      if(I_VMOV && !VMOVp) W_1E_Q <= I_DB;
+      
+      if(I_VBLKn && !VBLKnp)
+         W_1AC_Q <= W_1BD_Q; // Load
+      else
+         if(!VCKnp && I_VCKn)
+            W_1AC_Q <= W_1AC_Q + 8'd1;
+   end
 end
 
 
@@ -91,7 +92,7 @@ wire        W_2S4     = I_CMPBLK ? 1'b0     : 1'b1 ;
 
 ram_1024_8 U_3DE(
 
-   .I_CLK(~I_CLK_24M),
+   .I_CLK(I_CLK_48M),
    .I_ADDR(W_VRAM_AB), 
    .I_D(WI_DB),
    .I_CE(~W_VRAM_CS),
@@ -106,19 +107,19 @@ reg    CLK_3K;
 // in the wrong order on the schematics
 reg    [3:0]TCOL;
 
-always@(negedge I_CLK_24M) begin
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_24Mn) begin
+      reg CLK_3Kp, H_CNT0p;
 
-   reg CLK_3Kp, H_CNT0p;
-
-   CLK_3K  <= ~(I_H_CNT[1]&I_H_CNT[2]&I_H_CNT[3]);
-   CLK_3Kp <= CLK_3K;
-   
-   if (CLK_3Kp && !CLK_3K) TCOL <= {1'b1,WO_DB[7:5]};
-   
-   // Fix for timing issue
-   H_CNT0p <= I_H_CNT[0];
-   if (!H_CNT0p && I_H_CNT[0]) O_COL <= TCOL;
-
+      CLK_3K  <= ~(I_H_CNT[1]&I_H_CNT[2]&I_H_CNT[3]);
+      CLK_3Kp <= CLK_3K;
+      
+      if (CLK_3Kp && !CLK_3K) TCOL <= {1'b1,WO_DB[7:5]};
+      
+      // Fix for timing issue
+      H_CNT0p <= I_H_CNT[0];
+      if (!H_CNT0p && I_H_CNT[0]) O_COL <= TCOL;
+   end
 end
 
 //-------------------
@@ -128,7 +129,7 @@ end
 wire [11:0]W_VROM_AB = {I_GFXBANK,WO_DB[7:0],W_VF_CNT[2:0]};
 wire [15:0]W_3FJ_DO;
 
-VID_ROM roms3FJ(I_CLK_24M, W_VROM_AB, 1'b0, W_3FJ_DO,
+VID_ROM roms3FJ(I_CLK_48M, W_VROM_AB, 1'b0, W_3FJ_DO,
                 I_DLCLK, I_DLADDR, I_DLDATA, I_DLWR);
 
 //-------------------
@@ -159,25 +160,26 @@ reg    [7:0]reg_2J;
 assign W_2J_Qa = reg_2J[7];
 assign W_2J_Qh = reg_2J[0];
 
-always@(posedge I_CLK_24M) begin
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_24Mp) begin
+      reg H_CNT0p;
+      H_CNT0p <= I_H_CNT[0];
 
-   reg H_CNT0p;
-   H_CNT0p <= I_H_CNT[0];
+      if (!H_CNT0p && I_H_CNT[0]) begin
+         case(C_2H)
+            2'b00: reg_2H <= reg_2H;
+            2'b10: reg_2H <= {reg_2H[6:0],1'b0};
+            2'b01: reg_2H <= {1'b0,reg_2H[7:1]};
+            2'b11: reg_2H <= W_2H;
+         endcase
 
-   if (!H_CNT0p && I_H_CNT[0]) begin
-      case(C_2H)
-         2'b00: reg_2H <= reg_2H;
-         2'b10: reg_2H <= {reg_2H[6:0],1'b0};
-         2'b01: reg_2H <= {1'b0,reg_2H[7:1]};
-         2'b11: reg_2H <= W_2H;
-      endcase
-
-      case(C_2J)
-         2'b00: reg_2J <= reg_2J;
-         2'b10: reg_2J <= {reg_2J[6:0],1'b0};
-         2'b01: reg_2J <= {1'b0,reg_2J[7:1]};
-         2'b11: reg_2J <= W_2J;
-      endcase
+         case(C_2J)
+            2'b00: reg_2J <= reg_2J;
+            2'b10: reg_2J <= {reg_2J[6:0],1'b0};
+            2'b01: reg_2J <= {1'b0,reg_2J[7:1]};
+            2'b11: reg_2J <= W_2J;
+         endcase
+      end
    end
 end
 
@@ -201,16 +203,17 @@ assign O_VID[1] = W_2K_Y[3];
 
 reg    W_VRAMBUSY;
 
-always@(posedge I_CLK_24M)
+always@(posedge I_CLK_48M)
 begin
+   if (I_CEN_24Mp) begin
+      reg last_HCNT2;
+      last_HCNT2 <= I_H_CNT[2];
 
-   reg last_HCNT2;
-   last_HCNT2 <= I_H_CNT[2];
-
-   if(I_H_CNT[9] == 1'b0)
-      W_VRAMBUSY <= 1'b1;
-   else if (I_H_CNT[2] && !last_HCNT2)
-      W_VRAMBUSY <= I_H_CNT[4]&I_H_CNT[5]&I_H_CNT[6]&I_H_CNT[7];
+      if(I_H_CNT[9] == 1'b0)
+         W_VRAMBUSY <= 1'b1;
+      else if (I_H_CNT[2] && !last_HCNT2)
+         W_VRAMBUSY <= I_H_CNT[4]&I_H_CNT[5]&I_H_CNT[6]&I_H_CNT[7];
+   end
 end
 
 assign O_VRAMBUSYn = ~W_VRAMBUSY;

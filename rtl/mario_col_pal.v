@@ -9,9 +9,9 @@
 
 module mario_col_pal
 (
-   input        I_CLK_24M,
-   input        I_CLK_6M,
-   input        I_CEN6,
+   input        I_CLK_48M,
+   input        I_CEN_24Mn,
+   input        I_CEN_6M,
    input   [6:0]I_VRAM_D,
    input   [6:0]I_OBJ_D,
    input        I_CMPBLKn,
@@ -47,12 +47,14 @@ wire  [8:0]W_6TU_D   = {I_CPAL_SEL,W_4U5T_Y[6:0],I_CMPBLKn};
 reg   [8:0]W_6TU_Q;
 wire       W_6TU_RST = I_CMPBLKn | W_6TU_Q[0];
 
-always@(negedge I_CLK_24M)
+always@(posedge I_CLK_48M)
 begin
-   if(W_6TU_RST == 1'b0)
-      W_6TU_Q <= 9'b0;
-   else if (I_CEN6)
-      W_6TU_Q <= W_6TU_D;
+   if (I_CEN_24Mn) begin
+      if(W_6TU_RST == 1'b0)
+         W_6TU_Q <= 9'b0;
+      else if (I_CEN_6M)
+         W_6TU_Q <= W_6TU_D;
+   end
 end
 
 //--------------------------------------------------------------
@@ -66,7 +68,7 @@ end
 wire   [8:0]W_PAL_AB = {CL2,W_6TU_Q[8:1]}; 
 wire   [7:0]W_4P_DO;
 
-CLUT_PROM_512_8 prom4p(I_CLK_24M, W_PAL_AB, W_4P_DO,
+CLUT_PROM_512_8 prom4p(I_CLK_48M, W_PAL_AB, W_4P_DO,
                        I_DLCLK, I_DLADDR, I_DLDATA, I_DLWR);
 
 assign {O_R, O_G, O_B} = W_4P_DO; // 3R:3G:2B

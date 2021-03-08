@@ -142,16 +142,12 @@ localparam CONF_STR = {
 ////////////////////   CLOCKS   ///////////////////
 
 wire clk_sys;
-wire clk_sub;
-wire clk_main;
 
 pll pll
 (
    .refclk(CLK_50M),
    .rst(0),
-   .outclk_0(clk_sys),  // 24 Mhz
-   .outclk_1(clk_sub),  // 11 Mhz
-   .outclk_2(clk_main)  //  4 Mhz
+   .outclk_0(clk_sys)  // 48 Mhz
 );
 
 ///////////////////////////////////////////////////
@@ -325,11 +321,9 @@ assign AUDIO_L   = audio;
 assign AUDIO_R   = audio;
 assign AUDIO_S   = 1'b1;
 
-mario_top mariobros 
+mario_top mariobros
 (
-   .I_CLK_24M(clk_sys),
-   .I_CLK_4M(clk_main),
-   .I_CLK_11M(clk_sub),
+   .I_CLK_48M(clk_sys),
    .I_RESETn(~(RESET | status[0] | buttons[1])),
 
    .dn_addr(ioctl_addr),

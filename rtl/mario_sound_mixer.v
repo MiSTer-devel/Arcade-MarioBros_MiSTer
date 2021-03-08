@@ -10,7 +10,7 @@
 
 module mario_sound_mixer
 (
-   input               I_CLK_12M,
+   input               I_CLK_48M,
    input         [15:0]I_SND1,I_SND2,I_SND3,I_SND4,
    output signed [15:0]O_SND_DAT
 );
@@ -22,7 +22,7 @@ wire signed [18:0]sound_mix = {{3{I_SND1[15]}}, I_SND1} +
 
 reg signed [15:0]dac_di;
 
-always@(posedge I_CLK_12M)
+always@(posedge I_CLK_48M)
 begin
    if(sound_mix >= 19'sh07FFF)
       dac_di <= 16'sh7FFF;

@@ -8,9 +8,9 @@
 
 module mario_sound_digital
 (
-   input         I_CLK_24M,
-   input         I_CLK_12M,
-   input         I_SUBCLK,
+   input         I_CLK_48M,
+   input         I_CEN_12M,
+   input         I_CEN_11M,
    input         I_RST,
    input         I_DLCLK,
    input   [16:0]I_DLADDR,
@@ -40,7 +40,8 @@ wire    [7:0]M58715_PAO = {4'b0000, I_SND_CTRL[6:3]};
 
 M58715IP SOUND_CPU
 (
-   .I_CLK(I_SUBCLK),
+   .I_CLK(I_CLK_48M),
+   .I_CLK_EN(I_CEN_11M),
    .I_RSTn(I_RST),
    .I_INTn(~I_SND_CTRL[0]),
    .I_EA(~M58715_PBI[5]),
@@ -72,7 +73,16 @@ M58715IP SOUND_CPU
 wire    [11:0]S_ROM_A;
 reg     [7:0]L_ROM_A;
 
-always@(negedge M58715_ALE) L_ROM_A <= M58715_DBI;
+reg  M58715_ALE_q;
+wire M58715_ALE_fall = M58715_ALE_q & ~M58715_ALE;
+always@(posedge I_CLK_48M) begin
+   M58715_ALE_q <= M58715_ALE;
+end
+
+always@(posedge I_CLK_48M) begin
+   if (M58715_ALE_fall)
+      L_ROM_A <= M58715_DBI;
+end
 
 wire    A12      = ~M58715_RDn & ~M58715_PBI[7];
 wire    S_ROM_OE = ~A12 & M58715_PSENn;
@@ -81,23 +91,39 @@ assign  S_ROM_A  = {M58715_PBI[3:0],L_ROM_A[7:0]};
 
 
 reg     S_7J_OC;
-always@(posedge I_CLK_12M) S_7J_OC <= ~(~M58715_RDn & M58715_PBI[7]);
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_12M)
+      S_7J_OC <= ~(~M58715_RDn & M58715_PBI[7]);
+end
 
 wire    [7:0]S_PROG_D;
 
-SUB_EXT_ROM srom5k(I_CLK_12M, S_ROM_A, 1'b0, S_ROM_OE, S_PROG_D,
-                   I_CLK_24M, I_DLADDR, I_DLDATA, I_DLWR);
+SUB_EXT_ROM srom5k(I_CLK_48M, S_ROM_A, 1'b0, S_ROM_OE, S_PROG_D,
+                   I_CLK_48M, I_DLADDR, I_DLDATA, I_DLWR);
 
 // M58715 Data Bus
 wire    [7:0]M58715_DO = S_7J_OC == 1'b0 ? I_SND_DATA : S_PROG_D;
 
 reg     [7:0]DO;
-always@(posedge I_CLK_12M) DO <= M58715_DO;
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_12M)
+      DO <= M58715_DO;
+end
 assign  M58715_DBO = DO;
 
 // Sound out
 reg [15:0]SND_DAC;
-always@(posedge M58715_WRn) SND_DAC <= {2{~M58715_DBI[7],M58715_DBI[6:0]}}; // 16-bit signed;
+
+reg  M58715_WRn_q;
+wire M58715_WRn_rise = ~M58715_WRn_q & M58715_WRn;
+always@(posedge I_CLK_48M) begin
+   M58715_WRn_q <= M58715_WRn;
+end
+
+always@(posedge I_CLK_48M) begin
+   if (M58715_WRn_rise)
+      SND_DAC <= {2{~M58715_DBI[7],M58715_DBI[6:0]}}; // 16-bit signed;
+end
 
 //-----------------------------------------------------
 // Sound filter
@@ -111,9 +137,9 @@ wire  [15:0]W_FILT_OUT;
 
 iir_1st_order filter
 (
-   .clk(I_CLK_24M),
+   .clk(I_CLK_48M),
    .reset(~I_RST),
-   .div(12'd500), // 24Mhz / 500 = 48KHz
+   .div(12'd1000), // 48Mhz / 1000 = 48KHz
    .A2(-18'sd28065),
    .B1(18'sd2352),
    .B2(18'sd2352),

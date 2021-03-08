@@ -20,9 +20,10 @@
 
 module mario_obj
 (
-   input        I_CLK_24M,
-   input        I_CLK_12M,
-   input        I_CEN12,
+   input        I_CLK_48M,
+   input        I_CEN_24Mp,
+   input        I_CEN_24Mn,
+   input        I_CEN_12M,
    input   [9:0]I_AB,
    input   [7:0]I_DB,
    //input   [7:0]I_OBJ_D,
@@ -48,12 +49,30 @@ module mario_obj
    output       O_L_CMPBLKn
 );
 
+reg [1:0] cnt;
+always@(posedge I_CLK_48M) begin
+   cnt <= cnt + 1'd1;
+end
+wire I_CLK_12M; // as data not clock
+assign I_CLK_12M = (cnt == 0) || (cnt == 1);
+
+
+// Add a bit delay to make it work correctly
+reg I_CMPBLKn_delayed;
+always@(posedge I_CLK_48M) begin
+   I_CMPBLKn_delayed <=  I_CMPBLKn;
+end
+
 //------------
 // Part 6P(1)
 //------------
 
 reg    W_6P1;
-always@(negedge I_CLK_24M) W_6P1 <= ~(I_H_CNT[0]&I_H_CNT[1]&I_H_CNT[2]&I_H_CNT[3]);
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_24Mn) begin
+      W_6P1 <= ~(I_H_CNT[0]&I_H_CNT[1]&I_H_CNT[2]&I_H_CNT[3]);
+   end
+end
 
 //-----------------
 // Part 4K (LS139)
@@ -82,7 +101,11 @@ logic_74xx139 U_4K2
 );
 
 reg    [3:0]W_4K2_Q;
-always@(negedge I_CLK_24M) W_4K2_Q <= W_4K2_QB;
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_24Mn) begin
+      W_4K2_Q <= W_4K2_QB;
+   end
+end
 
 //------
 // Flip
@@ -117,7 +140,7 @@ wire   [7:0]W_OBJ_DI;
 ram_1024_8_8 U_8BC
 (
    // A Port - DMA port (write) 
-   .I_CLKA(~I_CLK_12M),
+   .I_CLKA(I_CLK_48M),
    .I_ADDRA(I_OBJ_DMA_A),
    .I_DA(I_OBJ_DMA_D),
    .I_CEA(I_OBJ_DMA_CE),
@@ -125,7 +148,7 @@ ram_1024_8_8 U_8BC
    .O_DA(),
 
    // B Port (read)
-   .I_CLKB(I_CLK_12M),
+   .I_CLKB(I_CLK_48M),
    .I_ADDRB(W_OBJ_AB[9:0]),
    .I_DB(8'h00),
    .I_CEB(1'b1),
@@ -145,17 +168,29 @@ wire        W_obj_CS = W_AB_SEL ? 1'b0     : I_OBJ_WRn & I_OBJ_RDn;
 // VFC_CNT[7:0]
 //--------------
 
-reg    [7:0]W_VFC_CNT;
-always@(negedge I_H_CNT[9]) W_VFC_CNT <= I_VF_CNT; // 6J, 7J
+reg  I_H_CNT9_q;
+wire I_H_CNT9_fall = I_H_CNT9_q & ~I_H_CNT[9];
+always@(posedge I_CLK_48M) begin
+   I_H_CNT9_q <= I_H_CNT[9];
+end
 
+reg    [7:0]W_VFC_CNT;
+always@(posedge I_CLK_48M) begin
+   if (I_H_CNT9_fall) begin
+      W_VFC_CNT <= I_VF_CNT; // 6J, 7J
+   end
+end
 //-----------------
 // Part 7D (LS273)
 //-----------------
 
 reg    [7:0]W_7D_Q;
-always@(negedge I_CLK_24M)
-   if (I_CEN12 == 1'b0)
-      W_7D_Q <= W_OBJ_DI;
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_24Mn) begin
+      if (I_CLK_12M == 1'b0)
+         W_7D_Q <= W_OBJ_DI;
+   end
+end
 
 //----------------------
 // Parts 6E,7E,6F,7F
@@ -173,13 +208,19 @@ wire   [8:0]W_67F_Q = W_67F_A + W_67F_B;
 //----
 
 reg    W_5F;
-always@(negedge I_CLK_24M)
-   if (I_CEN12)
-      W_5F <= ~(W_67F_Q[7]&W_67F_Q[6]&W_67F_Q[5]&W_67F_Q[4]);
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_24Mn) begin
+      if (I_CLK_12M)
+         W_5F <= ~(W_67F_Q[7]&W_67F_Q[6]&W_67F_Q[5]&W_67F_Q[4]);
+   end
+end
 
 reg    CLK_4F;
-always@(negedge I_CLK_24M) CLK_4F = ~(I_H_CNT[0] & (~I_H_CNT[1]));
-
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_24Mn) begin
+      CLK_4F = ~(I_H_CNT[0] & (~I_H_CNT[1]));
+   end
+end
 wire   W_5E = ~(W_5CD_Q[6] | W_5CD_Q[7]);
 wire   W_4J = ~(I_H_CNT[2]&I_H_CNT[3]&I_H_CNT[4]&I_H_CNT[5]&I_H_CNT[6]&I_H_CNT[7]&I_H_CNT[8] & W_5E);
 
@@ -190,10 +231,16 @@ wire   W_4J = ~(I_H_CNT[2]&I_H_CNT[3]&I_H_CNT[4]&I_H_CNT[5]&I_H_CNT[6]&I_H_CNT[7
 reg    W_4F_Q;
 wire   W_RST_4F = ~I_H_CNT[9];
 
-always@(posedge CLK_4F or negedge W_RST_4F)
+reg  CLK_4F_q;
+wire CLK_4F_rise = ~CLK_4F_q & CLK_4F;
+always@(posedge I_CLK_48M) begin
+   CLK_4F_q <= CLK_4F;
+end
+
+always@(posedge I_CLK_48M or negedge W_RST_4F)
 begin
-   if(W_RST_4F == 0) W_4F_Q <= 1'b0;
-   else            W_4F_Q <= ~(W_5F & W_4J);
+   if(W_RST_4F == 0)     W_4F_Q <= 1'b0;
+   else if (CLK_4F_rise) W_4F_Q <= ~(W_5F & W_4J);
 end
 
 //-----------------
@@ -204,10 +251,16 @@ wire   CLK_5CD = ~(I_CLK_12M & (~I_H_CNT[9]) & W_4F_Q & W_5E);
 wire   W_5CD_RST = ~I_H_CNT[9];
 reg    [7:0]W_5CD_Q;
 
-always@(posedge CLK_5CD or negedge W_5CD_RST)
+reg  CLK_5CD_q;
+wire CLK_5CD_rise = ~CLK_5CD_q & CLK_5CD;
+always@(posedge I_CLK_48M) begin
+   CLK_5CD_q <= CLK_5CD;
+end
+
+always@(posedge I_CLK_48M or negedge W_5CD_RST)
 begin
-   if(W_5CD_RST == 1'b0) W_5CD_Q <= 0;
-   else                  W_5CD_Q <= W_5CD_Q +1;
+   if(W_5CD_RST == 1'b0)  W_5CD_Q <= 0;
+   else if (CLK_5CD_rise) W_5CD_Q <= W_5CD_Q + 1'd1;
 end
 
 //---------
@@ -215,9 +268,12 @@ end
 //---------
 
 reg    [7:0]W_8D_Q;
-always@(negedge I_CLK_24M) 
-   if (I_CEN12 == 1'b0)
-      W_8D_Q <= W_7D_Q;
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_24Mn) begin
+      if (I_CLK_12M == 1'b0)
+         W_8D_Q <= W_7D_Q;
+   end
+end
 
 //----------------------------------------------------
 // RAM 8E
@@ -231,7 +287,7 @@ wire   [8:0]W_RAM_8E_DOB;
 
 ram_64_9 U_8E
 (
-   .I_CLKA(~I_CLK_24M),
+   .I_CLKA(I_CLK_48M),
    .I_ADDRA(W_RAM_8E_AB),
    .I_DA(W_RAM_8E_DIB),
    .I_CEA(1'b1),
@@ -240,14 +296,23 @@ ram_64_9 U_8E
 );
 
 reg    [7:0]W_HD;
-always@(negedge I_CLK_24M) W_HD <= W_RAM_8E_DOB[8:1]; // Not on the schematics?
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_24Mn)
+      W_HD <= W_RAM_8E_DOB[8:1]; // Not on the schematics?
+end
+
+// Add a bit delay to make it work correctly
+reg [8:0] W_RAM_8E_DOB_delayed;
+always@(posedge I_CLK_48M) begin
+   W_RAM_8E_DOB_delayed <= W_RAM_8E_DOB;
+end
 
 //----------------------
 // Parts 6K,7K,6L,7L
 // 4-bit adders (LS283)
 //----------------------
 
-wire   [7:0]W_67K_A = W_RAM_8E_DOB[8:1];
+wire   [7:0]W_67K_A = W_RAM_8E_DOB_delayed[8:1];
 wire   [7:0]W_67K_B = {4'b1111,W_FLIP_5,W_FLIP_4,W_FLIP_4,1'b1}; 
 wire   [8:0]W_67K_Q = W_67K_A + W_67K_B + 8'b00000001;
 
@@ -261,29 +326,50 @@ wire   [8:0]W_67L_Q = W_67L_A + W_67L_B;
 
 wire   [7:0]W_6M_D  = W_67L_Q[7:0];
 reg    [7:0]W_6M_Q;
-always@(posedge W_4K2_Q[0]) W_6M_Q <= W_6M_D;
 
+reg  W_4K2_Q0_q;
+wire W_4K2_Q0_rise = ~W_4K2_Q0_q & W_4K2_Q[0];
+always@(posedge I_CLK_48M) begin
+   W_4K2_Q0_q <= W_4K2_Q[0];
+end
+
+always@(posedge I_CLK_48M) begin
+   if (W_4K2_Q0_rise)
+      W_6M_Q <= W_6M_D;
+end
 //-------------------
 // Part 8J (LS273)
 //-------------------
 
 reg    [7:0]W_8J_Q;
-always@(posedge W_4K2_Q[1]) W_8J_Q <= W_HD[7:0];
+
+reg  W_4K2_Q1_q;
+wire W_4K2_Q1_rise = ~W_4K2_Q1_q & W_4K2_Q[1];
+always@(posedge I_CLK_48M) begin
+   W_4K2_Q1_q <= W_4K2_Q[1];
+end
+
+always@(posedge I_CLK_48M) begin
+   if (W_4K2_Q1_rise)
+      W_8J_Q <= W_HD[7:0];
+end
 
 //-------------------
 // Part 6R (LS377)
 //-------------------
 
-wire   [7:0]W_6R_D = {W_8J_Q[7],I_CMPBLKn,~I_H_CNT[9],
+wire   [7:0]W_6R_D = {W_8J_Q[7],I_CMPBLKn_delayed,~I_H_CNT[9],
                       ~(I_H_CNT[9]|W_FLIP_2),W_8J_Q[3:0]};
 reg    [7:0]W_6R_Q;
 
-always@(posedge I_CLK_12M)
+always@(posedge I_CLK_48M)
 begin
-   if(W_6P1 == 1'b0)
-      W_6R_Q <= W_6R_D;
-   else
-      W_6R_Q <= W_6R_Q;
+   if (I_CEN_12M) begin
+      if(W_6P1 == 1'b0)
+         W_6R_Q <= W_6R_D;
+      else
+         W_6R_Q <= W_6R_Q;
+   end
 end
 
 assign O_L_CMPBLKn = W_6R_Q[6];
@@ -297,6 +383,7 @@ wire   W_3M_Q;
 
 logic_74xx109 U_3M
 (
+   .FAST_CLK(I_CLK_48M),
    .CLK(W_4K2_Q[0]),
    .RST(I_H_CNT[9]),
    .I_J(~W_RAM_8E_DOB[0]),
@@ -332,8 +419,8 @@ assign W_ROM_OBJ_AB[3:0]  = W_6M_Q[3:0]^{W_8J_Q[6],W_8J_Q[6],W_8J_Q[6],W_8J_Q[6]
 assign W_ROM_OBJ_AB[11:4] = W_8K_Q;
 wire [47:0]W_ROM_OBJ_D;
 
-OBJ_ROM objrom(I_CLK_12M, W_ROM_OBJ_AB, W_ROM_OBJ_D, 
-               I_CLK_24M, I_DLADDR, I_DLDATA, I_DLWR);
+OBJ_ROM objrom(I_CLK_48M, W_ROM_OBJ_AB, W_ROM_OBJ_D, 
+               I_CLK_48M, I_DLADDR, I_DLDATA, I_DLWR);
 
 //-----------------------------
 // Parts 8N, 8P
@@ -349,14 +436,16 @@ reg   [15:0]reg_8NP;
 assign W_8N_Qa = reg_8NP[15];
 assign W_8P_Qh = reg_8NP[0];
 
-always@(posedge I_CLK_12M)
+always@(posedge I_CLK_48M)
 begin
-   case(C_8NP)
-      2'b00: reg_8NP <= reg_8NP;
-      2'b10: reg_8NP <= {reg_8NP[14:0],1'b0};
-      2'b01: reg_8NP <= {1'b0,reg_8NP[15:1]};
-      2'b11: reg_8NP <= W_8NP;
-   endcase
+   if (I_CEN_12M) begin
+      case(C_8NP)
+         2'b00: reg_8NP <= reg_8NP;
+         2'b10: reg_8NP <= {reg_8NP[14:0],1'b0};
+         2'b01: reg_8NP <= {1'b0,reg_8NP[15:1]};
+         2'b11: reg_8NP <= W_8NP;
+      endcase
+   end
 end
 
 //-----------------------------
@@ -373,14 +462,16 @@ reg   [15:0]reg_8RS;
 assign W_8R_Qa = reg_8RS[15];
 assign W_8S_Qh = reg_8RS[0];
 
-always@(posedge I_CLK_12M)
+always@(posedge I_CLK_48M)
 begin
-   case(C_8RS)
-      2'b00: reg_8RS <= reg_8RS;
-      2'b10: reg_8RS <= {reg_8RS[14:0],1'b0};
-      2'b01: reg_8RS <= {1'b0,reg_8RS[15:1]};
-      2'b11: reg_8RS <= W_8RS;
-   endcase
+   if (I_CEN_12M) begin
+      case(C_8RS)
+         2'b00: reg_8RS <= reg_8RS;
+         2'b10: reg_8RS <= {reg_8RS[14:0],1'b0};
+         2'b01: reg_8RS <= {1'b0,reg_8RS[15:1]};
+         2'b11: reg_8RS <= W_8RS;
+      endcase
+   end
 end
 
 //-----------------------------
@@ -397,14 +488,16 @@ reg   [15:0]reg_8TU;
 assign W_8T_Qa = reg_8TU[15];
 assign W_8U_Qh = reg_8TU[0];
 
-always@(posedge I_CLK_12M)
+always@(posedge I_CLK_48M)
 begin
-   case(C_8TU)
-      2'b00: reg_8TU <= reg_8TU;
-      2'b10: reg_8TU <= {reg_8TU[14:0],1'b0};
-      2'b01: reg_8TU <= {1'b0,reg_8TU[15:1]};
-      2'b11: reg_8TU <= W_8TU;
-   endcase
+   if (I_CEN_12M) begin
+      case(C_8TU)
+         2'b00: reg_8TU <= reg_8TU;
+         2'b10: reg_8TU <= {reg_8TU[14:0],1'b0};
+         2'b01: reg_8TU <= {1'b0,reg_8TU[15:1]};
+         2'b11: reg_8TU <= W_8TU;
+      endcase
+   end
 end
 
 //--------------
@@ -425,8 +518,11 @@ assign W_8LM_Y = W_6R_Q[7] ? W_8LM_B : W_8LM_A;
 
 reg    CLK_4M5M;
 
-always@(negedge I_CLK_24M)
-   CLK_4M5M <= ~(~(I_H_CNT[0] & W_6R_Q[5]) & I_CLK_12M);
+always@(posedge I_CLK_48M) begin
+   if (I_CEN_24Mn)
+      CLK_4M5M <= ~(~(I_H_CNT[0] & W_6R_Q[5]) & I_CLK_12M);
+end
+   
 
 wire   [7:0]W_4M5M_DI = W_67K_Q[7:0];
 
@@ -435,15 +531,23 @@ wire   W_4M5M_LD  = W_4K1_Q[1];
 
 reg    [7:0]W_4M5M_Q;
 
-always@(posedge CLK_4M5M)
+reg  CLK_4M5M_q;
+wire CLK_4M5M_rise = ~CLK_4M5M_q & CLK_4M5M;
+always@(posedge I_CLK_48M) begin
+   CLK_4M5M_q <= CLK_4M5M;
+end
+
+always@(posedge I_CLK_48M)
 begin
-   if(W_4M5M_LD == 1'b0) 
-      W_4M5M_Q <= W_4M5M_DI;
-   else begin
-      if(W_4M5M_RST == 1'b0)
-         W_4M5M_Q <= 0 ;
-      else     
-         W_4M5M_Q <= W_4M5M_Q + 1;
+   if (CLK_4M5M_rise) begin
+      if(W_4M5M_LD == 1'b0) 
+         W_4M5M_Q <= W_4M5M_DI;
+      else begin
+         if(W_4M5M_RST == 1'b0)
+            W_4M5M_Q <= 0 ;
+         else     
+            W_4M5M_Q <= W_4M5M_Q + 1'd1;
+      end
    end
 end
 
@@ -454,13 +558,13 @@ end
 wire   [7:0]W_RAM_3RP_AB = W_4M5M_Q[7:0]^{8{W_6R_Q[4]}};
 
 wire   [6:0]W_4S5S_A     = {W_6R_Q[3:0],W_8LM_Y[2],W_8LM_Y[3],W_8LM_Y[4]};
-wire   [6:0]W_RAM_3RP_DI = W_6R_Q[5] ? 8'h00 :(W_8LM_Y[2]|W_8LM_Y[3]|W_8LM_Y[4])? W_4S5S_A : W_RAM_3RP_DO;
+wire   [6:0]W_RAM_3RP_DI = W_6R_Q[5] ? 7'h00 :(W_8LM_Y[2]|W_8LM_Y[3]|W_8LM_Y[4])? W_4S5S_A : W_RAM_3RP_DO;
 
 wire   [6:0]W_RAM_3RP_DO;
 
 ram_256_8 U_3RP
 (
-   .I_CLKA(I_CLK_24M),
+   .I_CLKA(I_CLK_48M),
    .I_ADDRA(W_RAM_3RP_AB),
    .I_DA(W_RAM_3RP_DI),
    .I_CEA(1'b1),
@@ -474,12 +578,14 @@ ram_256_8 U_3RP
 
 reg    [6:0]W_OBJ_DO;
 
-always@(posedge I_CLK_24M)
+always@(posedge I_CLK_48M)
 begin
-   if(~I_CLK_12M)
-      W_OBJ_DO <= W_RAM_3RP_DO;
-   else 
-      W_OBJ_DO <= W_OBJ_DO ;
+   if (I_CEN_24Mp) begin
+      if(~I_CLK_12M)
+         W_OBJ_DO <= W_RAM_3RP_DO;
+      else 
+         W_OBJ_DO <= W_OBJ_DO ;
+   end
 end
 
 assign O_OBJ_DO = W_OBJ_DO;

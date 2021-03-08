@@ -8,10 +8,11 @@
 
 module mario_video
 (
-   input        I_CLK_24M,
-   input        I_CLK_12M,
-   input        I_CEN12,
-   input        I_CEN6,
+   input        I_CLK_48M,
+   input        I_CEN_24Mp,
+   input        I_CEN_24Mn,
+   input        I_CEN_6M,
+   input        I_CEN_12M,
    input        I_RESETn,
    input   [9:0]I_CPU_A,
    input   [7:0]I_CPU_D,
@@ -53,7 +54,9 @@ wire        W_TROMn = I_2L_Q[0];
 
 mario_vram vram
 (
-   .I_CLK_24M(I_CLK_24M),
+   .I_CLK_48M(I_CLK_48M),
+   .I_CEN_24Mp(I_CEN_24Mp),
+   .I_CEN_24Mn(I_CEN_24Mn),
    .I_AB(I_CPU_A),
    .I_DB(I_CPU_D),
    .I_VRAM_WRn(I_VRAM_WRn),
@@ -65,7 +68,7 @@ mario_vram vram
    .I_VCKn(I_VCKn),
    .I_GFXBANK(W_TROMn),
    .I_VMOV(I_VMOV),
-   .I_DLCLK(I_CLK_24M),
+   .I_DLCLK(I_CLK_48M),
    .I_DLADDR(I_DLADDR),
    .I_DLDATA(I_DLDATA),
    .I_DLWR(I_DLWR),
@@ -95,9 +98,10 @@ wire  [7:0]W_OBJ_DB;
 
 mario_obj sprites
 (
-   .I_CLK_24M(I_CLK_24M),
-   .I_CLK_12M(I_CLK_12M),
-   .I_CEN12(I_CEN12),
+   .I_CLK_48M(I_CLK_48M),
+   .I_CEN_24Mp(I_CEN_24Mp),
+   .I_CEN_24Mn(I_CEN_24Mn),
+   .I_CEN_12M(I_CEN_12M),
    .I_AB(),            // Not used
    .I_DB(/*W_2N_DO*/), // Not used
    .I_OBJ_WRn(1'b1),   // Not used
@@ -135,14 +139,14 @@ wire   [1:0]W_B;
 
 mario_col_pal cpal
 (
-   .I_CLK_24M(I_CLK_24M),
-   .I_CLK_6M(I_H_CNT[0]),
-   .I_CEN6(I_CEN6),
+   .I_CLK_48M(I_CLK_48M),
+   .I_CEN_24Mn(I_CEN_24Mn),
+   .I_CEN_6M(I_CEN_6M),
    .I_VRAM_D(W_VRAM_DAT),
    .I_OBJ_D(W_OBJ_DAT),
    .I_CMPBLKn(W_L_CMPBLKn),
    .I_CPAL_SEL(I_2L_Q[3]),
-   .I_DLCLK(I_CLK_24M),
+   .I_DLCLK(I_CLK_48M),
    .I_DLADDR(I_DLADDR),
    .I_DLDATA(I_DLDATA),
    .I_DLWR(I_DLWR),
