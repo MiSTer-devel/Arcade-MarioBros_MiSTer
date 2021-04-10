@@ -9,8 +9,7 @@
 
 module mario_sound_analog
 (
-   input          I_CLK_24M,
-   input          I_CLK_12M,
+   input          I_CLK_48M,
    input          I_RESETn,
 
    input     [2:0]I_SND_CTRL,
@@ -33,8 +32,8 @@ module mario_sound_analog
 reg   [12:0]WAVROM_ADDR;
 wire  [15:0]W_WAVROM_DO;
 
-WAV_ROM wavrom(~I_CLK_12M, WAVROM_ADDR, W_WAVROM_DO,
-               I_CLK_24M, I_DLADDR, I_DLDATA, I_DLWR);
+WAV_ROM wavrom(I_CLK_48M, WAVROM_ADDR, W_WAVROM_DO,
+               I_CLK_48M, I_DLADDR, I_DLDATA, I_DLWR);
 
 wire signed [15:0]W_WAVROM_DS[0:3];
 wire        [12:0]W_WAVROM_A[0:3];
@@ -44,10 +43,10 @@ wire        [12:0]W_WAVROM_A[0:3];
 //------------
 mario_wav_sound skid_sound
 (
-   .I_CLK(I_CLK_24M),
+   .I_CLK(I_CLK_48M),
    .I_RSTn(I_RESETn),
    .I_H_CNT(I_H_CNT[3:0]),
-   .I_DIV(12'd1088), // 24Mhz / 1088 = 22,050Hz
+   .I_DIV(12'd2176), // 48Mhz / 2176 = 22,050Hz
    .I_VOL(I_ANLG_VOL),
    .I_DMA_TRIG(~I_SND_CTRL[0]),
    .I_DMA_STOP(1'b0),
@@ -67,10 +66,10 @@ assign O_WAVROM_DS0 = W_WAVROM_DS[0];
 //-----------------
 mario_wav_sound mario_run_sound
 (
-   .I_CLK(I_CLK_24M),
+   .I_CLK(I_CLK_48M),
    .I_RSTn(I_RESETn),
    .I_H_CNT(I_H_CNT[3:0]),
-   .I_DIV(12'd1088),
+   .I_DIV(12'd2176),
    .I_VOL(I_ANLG_VOL),
    .I_DMA_TRIG(~I_SND_CTRL[1]),
    .I_DMA_STOP(1'b0),
@@ -90,10 +89,10 @@ assign O_WAVROM_DS1 = W_WAVROM_DS[1];
 //-----------------
 mario_wav_sound luigi_run_sound
 (
-   .I_CLK(I_CLK_24M),
+   .I_CLK(I_CLK_48M),
    .I_RSTn(I_RESETn),
    .I_H_CNT(I_H_CNT[3:0]),
-   .I_DIV(12'd1088),
+   .I_DIV(12'd2176),
    .I_VOL(I_ANLG_VOL),
    .I_DMA_TRIG(~I_SND_CTRL[2]),
    .I_DMA_STOP(1'b0),
@@ -112,7 +111,7 @@ assign O_WAVROM_DS2 = W_WAVROM_DS[2];
 // Sample ROM address bus sharing
 //--------------------------------
 
-always @(posedge I_CLK_12M or negedge I_RESETn)
+always @(posedge I_CLK_48M or negedge I_RESETn)
 begin
    if(! I_RESETn)begin
 

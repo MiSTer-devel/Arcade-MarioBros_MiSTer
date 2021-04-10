@@ -8,8 +8,10 @@
 
 module mario_adec
 (
-   input        I_CLK12M,
-   input        I_CLK,
+   input        I_CLK_48M,
+   input        I_CEN_12M,
+   input        I_CEN_4Mp,
+   input        I_CEN_4Mn,
    input        I_RESET_n,
    input  [15:0]I_AB,
    input   [7:0]I_DB,
@@ -54,18 +56,19 @@ reg    W_3D_Q;
 reg    W_4D1_Qn;
 assign O_WAIT_n = W_4D1_Qn;
 
-always@(posedge I_CLK or negedge I_VBLK_n)
+always@(posedge I_CLK_48M or negedge I_VBLK_n)
 begin
    if(I_VBLK_n == 1'b0)
       W_4D1_Qn <= 1'b1;
-   else
+   else if (I_CEN_4Mp)
       W_4D1_Qn <= I_VRAMBUSY_n | W_4A2_Q[1] | ~I_RFSH_n;
 end
 
 // Enable signal for writing to VRAM and OBJRAM.
-always@(negedge I_CLK)
+always@(posedge I_CLK_48M)
 begin
-   W_3D_Q <= W_4D1_Qn;
+   if (I_CEN_4Mn)
+      W_3D_Q <= W_4D1_Qn;
 end
 
 //-----------------------------------------------
@@ -75,12 +78,19 @@ end
 //-----------------------------------------------
 
 wire  W_VBLK = ~I_VBLK_n;
+reg   W_VBLK_q;
 reg   W_4D2_Q;
-always@(posedge W_VBLK or negedge W_2L_Q[4])
+
+always@(posedge I_CLK_48M) begin
+   W_VBLK_q <= W_VBLK;
+end
+wire W_VBLK_rise = ~W_VBLK_q & W_VBLK;
+
+always@(posedge I_CLK_48M or negedge W_2L_Q[4])
 begin
    if(~W_2L_Q[4])
       W_4D2_Q <= 1'b1;
-   else
+   else if (W_VBLK_rise)
       W_4D2_Q <= 1'b0;
 end
 
@@ -92,7 +102,7 @@ assign O_NMI_n = W_4D2_Q;
 
 wire  [7:0]W_PROM5B_Q;
 
-ADEC_PROM prom5b(I_CLK12M, I_AB[15:11], W_PROM5B_Q, 
+ADEC_PROM prom5b(I_CLK_48M, I_AB[15:11], W_PROM5B_Q, 
                  I_DLCLK, I_DLADDR, I_DLDATA, I_DLWR);
 
 assign O_MROM_CSn = {W_PROM5B_Q[7],W_PROM5B_Q[2:0]};
@@ -236,12 +246,12 @@ assign O_4C_Q = W_4C_Q;
 
 reg   [7:0]W_2L_Q;
 
-always@(posedge I_CLK12M or negedge I_RESET_n)
+always@(posedge I_CLK_48M or negedge I_RESET_n)
 begin
    if(I_RESET_n == 1'b0) begin
       W_2L_Q <= 0;
    end 
-   else begin
+   else if (I_CEN_12M) begin
       if(W_4C_Q[5] == 1'b0) begin
          case(I_AB[2:0])
             3'h0 : W_2L_Q[0] <= I_DB[0]; // 7E80H - T ROM - GFX bank select
@@ -267,12 +277,12 @@ assign O_2L_Q = W_2L_Q;
 
 reg   [7:0]W_7M_Q;
 
-always@(posedge I_CLK12M or negedge I_RESET_n)
+always@(posedge I_CLK_48M or negedge I_RESET_n)
 begin
    if(I_RESET_n == 1'b0) begin
       W_7M_Q <= 0;
    end 
-   else begin
+   else if (I_CEN_12M) begin
       if(W_4C_Q[6] == 1'b0) begin
          case(I_AB[2:0])
             3'h0 : W_7M_Q[0] <= I_DB[0]; // 7F00H - /INT
@@ -298,7 +308,17 @@ assign O_7M_Q = W_7M_Q;
 //--------------------------
 
 reg [7:0]W_7J_Q;
-always@(posedge W_4C_Q[4]) W_7J_Q <= I_DB;
+
+reg W_4C_Q4q;
+always@(posedge I_CLK_48M) begin
+   W_4C_Q4q <= W_4C_Q[4];
+end
+wire W_4C_Q4_rise = ~W_4C_Q4q & W_4C_Q[4];
+
+always@(posedge I_CLK_48M) begin
+   if (W_4C_Q4_rise)
+      W_7J_Q <= I_DB;
+end
 
 assign O_7J_Q = W_7J_Q;
 

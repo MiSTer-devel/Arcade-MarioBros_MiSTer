@@ -13,6 +13,7 @@
 module M58715IP(
 
 I_CLK,
+I_CLK_EN,
 I_RSTn,
 I_INTn,
 I_EA,
@@ -33,6 +34,7 @@ O_P2
 );
 
 input  I_CLK;
+input  I_CLK_EN;
 input  I_RSTn;
 input  I_INTn;
 input  I_EA;
@@ -101,6 +103,7 @@ wire   xtal3_s;
 t48_core t48_core
 (
    .xtal_i(I_CLK),
+   .xtal_en_i(I_CLK_EN),
    .reset_i(I_RSTn),
    .t0_i(I_T0),
    .t0_o(O_T0),

@@ -8,9 +8,9 @@
 
 module mario_sound
 (
-   input         I_CLK_24M,
-   input         I_CLK_12M,
-   input         I_CLK_11M,
+   input         I_CLK_48M,
+   input         I_CEN_12M,
+   input         I_CEN_11M,
    input         I_RESETn,
    input    [7:0]I_SND_DATA,
    input    [9:0]I_SND_CTRL,
@@ -33,9 +33,9 @@ wire   [15:0]W_D_S_DATA;
 
 mario_sound_digital digital_sound
 (
-   .I_CLK_24M(I_CLK_24M),
-   .I_CLK_12M(I_CLK_12M),
-   .I_SUBCLK(I_CLK_11M),
+   .I_CLK_48M(I_CLK_48M),
+   .I_CEN_12M(I_CEN_12M),
+   .I_CEN_11M(I_CEN_11M),
    .I_RST(I_RESETn),
    .I_DLADDR(I_DLADDR),
    .I_DLDATA(I_DLDATA),
@@ -55,8 +55,7 @@ wire signed [15:0]W_WAVROM_DS[0:2];
 
 mario_sound_analog analog_sound
 (
-   .I_CLK_24M(I_CLK_24M),
-   .I_CLK_12M(I_CLK_12M),
+   .I_CLK_48M(I_CLK_48M),
    .I_RESETn(I_RESETn),
 
    .I_SND_CTRL(I_SND_CTRL[9:7]),
@@ -80,7 +79,7 @@ wire signed [15:0]W_SND_MIX;
 
 mario_sound_mixer mixer
 (
-   .I_CLK_12M(I_CLK_12M),
+   .I_CLK_48M(I_CLK_48M),
    .I_SND1(W_WAVROM_DS[0]),
    .I_SND2(W_WAVROM_DS[1]),
    .I_SND3(W_WAVROM_DS[2]),

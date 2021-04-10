@@ -20,7 +20,7 @@
 //================================================
 
 module logic_74xx109(
-
+FAST_CLK,
 CLK,
 RST,
 I_J,
@@ -29,18 +29,25 @@ O_Q
 
 );
 
-input  CLK,RST;
+input  FAST_CLK,CLK,RST;
 input  I_J,I_K;
 output O_Q;
 
+reg    CLK_q;
 reg    Q;
 
 assign O_Q   = Q;
 
-always@(posedge CLK or negedge RST)
+always@(posedge FAST_CLK)begin
+   CLK_q <= CLK;
+end
+
+wire CLK_rise = ~CLK_q & CLK;
+
+always@(posedge FAST_CLK or negedge RST)
 begin
    if(RST == 1'b0) Q <= 1'b0;
-   else begin
+   else if (CLK_rise) begin
       case({I_J,I_K})
          2'b00: Q <= 1'b0;
          2'b01: Q <= Q;
