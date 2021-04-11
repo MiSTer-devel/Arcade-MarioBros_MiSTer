@@ -29,7 +29,16 @@ module mario_top
    output        O_VGA_VSYNCn,
    output        O_PIX,
 
-   output signed [15:0] O_SOUND_DAT
+   output signed [15:0] O_SOUND_DAT,
+
+   input          pause,
+
+   input   [15:0] hs_address,
+   input    [7:0] hs_data_in,
+   output   [7:0] hs_data_out,
+   input          hs_write,
+   input          hs_access
+
 );
 
 wire   W_RESETn      = I_RESETn;
@@ -184,7 +193,15 @@ mario_main maincpu
    .O_4C_Q(W_4C_Q),
    .O_2L_Q(W_2L_Q),
    .O_7M_Q(W_7M_Q),
-   .O_7J_Q(W_7J_Q)
+   .O_7J_Q(W_7J_Q),
+
+   .pause(pause),
+
+   .hs_address(hs_address),
+   .hs_data_in(hs_data_in),
+   .hs_data_out(hs_data_out),
+   .hs_write(hs_write),
+   .hs_access(hs_access)
 );
 
 //------------------------------------

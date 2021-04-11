@@ -44,75 +44,158 @@ module emu
   //Must be based on CLK_VIDEO
   output        CE_PIXEL,
 
-  //Video aspect ratio for HDMI. Most retro systems have ratio 4:3.
-  output  [7:0] VIDEO_ARX,
-  output  [7:0] VIDEO_ARY,
+	//Video aspect ratio for HDMI. Most retro systems have ratio 4:3.
+	//if VIDEO_ARX[12] or VIDEO_ARY[12] is set then [11:0] contains scaled size instead of aspect ratio.
+	output [12:0] VIDEO_ARX,
+	output [12:0] VIDEO_ARY,
 
-  output  [7:0] VGA_R,
-  output  [7:0] VGA_G,
-  output  [7:0] VGA_B,
-  output        VGA_HS,
-  output        VGA_VS,
-  output        VGA_DE,    // = ~(VBlank | HBlank)
-  output        VGA_F1,
-  output [1:0]  VGA_SL,
+	output  [7:0] VGA_R,
+	output  [7:0] VGA_G,
+	output  [7:0] VGA_B,
+	output        VGA_HS,
+	output        VGA_VS,
+	output        VGA_DE,    // = ~(VBlank | HBlank)
+	output        VGA_F1,
+	output [1:0]  VGA_SL,
+	output        VGA_SCALER, // Force VGA scaler
 
-  // Use framebuffer from DDRAM (USE_FB=1 in qsf)
-  // FB_FORMAT:
-  //    [2:0] : 011=8bpp(palette) 100=16bpp 101=24bpp 110=32bpp
-  //    [3]   : 0=16bits 565 1=16bits 1555
-  //    [4]   : 0=RGB  1=BGR (for 16/24/32 modes)
-  //
-  // stride is modulo 256 of bytes
+	input  [11:0] HDMI_WIDTH,
+	input  [11:0] HDMI_HEIGHT,
 
-  output        FB_EN,
-  output  [4:0] FB_FORMAT,
-  output [11:0] FB_WIDTH,
-  output [11:0] FB_HEIGHT,
-  output [31:0] FB_BASE,
-  input         FB_VBL,
-  input         FB_LL,
+`ifdef MISTER_FB
+	// Use framebuffer in DDRAM (USE_FB=1 in qsf)
+	// FB_FORMAT:
+	//    [2:0] : 011=8bpp(palette) 100=16bpp 101=24bpp 110=32bpp
+	//    [3]   : 0=16bits 565 1=16bits 1555
+	//    [4]   : 0=RGB  1=BGR (for 16/24/32 modes)
+	//
+	// FB_STRIDE either 0 (rounded to 256 bytes) or multiple of pixel size (in bytes)
+	output        FB_EN,
+	output  [4:0] FB_FORMAT,
+	output [11:0] FB_WIDTH,
+	output [11:0] FB_HEIGHT,
+	output [31:0] FB_BASE,
+	output [13:0] FB_STRIDE,
+	input         FB_VBL,
+	input         FB_LL,
+	output        FB_FORCE_BLANK,
 
-  output        LED_USER,  // 1 - ON, 0 - OFF.
+`ifdef MISTER_FB_PALETTE
+	// Palette control for 8bit modes.
+	// Ignored for other video modes.
+	output        FB_PAL_CLK,
+	output  [7:0] FB_PAL_ADDR,
+	output [23:0] FB_PAL_DOUT,
+	input  [23:0] FB_PAL_DIN,
+	output        FB_PAL_WR,
+`endif
+`endif
 
-  // b[1]: 0 - LED status is system status OR'd with b[0]
-  //       1 - LED status is controled solely by b[0]
-  // hint: supply 2'b00 to let the system control the LED.
-  output  [1:0] LED_POWER,
-  output  [1:0] LED_DISK,
+	output        LED_USER,  // 1 - ON, 0 - OFF.
 
-  input         CLK_AUDIO, // 24.576 MHz
-  output [15:0] AUDIO_L,
-  output [15:0] AUDIO_R,
-  output        AUDIO_S,   // 1 - signed audio samples, 0 - unsigned
+	// b[1]: 0 - LED status is system status OR'd with b[0]
+	//       1 - LED status is controled solely by b[0]
+	// hint: supply 2'b00 to let the system control the LED.
+	output  [1:0] LED_POWER,
+	output  [1:0] LED_DISK,
 
-  //High latency DDR3 RAM interface
-  //Use for non-critical time purposes
-  output        DDRAM_CLK,
-  input         DDRAM_BUSY,
-  output  [7:0] DDRAM_BURSTCNT,
-  output [28:0] DDRAM_ADDR,
-  input  [63:0] DDRAM_DOUT,
-  input         DDRAM_DOUT_READY,
-  output        DDRAM_RD,
-  output [63:0] DDRAM_DIN,
-  output  [7:0] DDRAM_BE,
-  output        DDRAM_WE,
+	// I/O board button press simulation (active high)
+	// b[1]: user button
+	// b[0]: osd button
+	output  [1:0] BUTTONS,
 
-  // Open-drain User port.
-  // 0 - D+/RX
-  // 1 - D-/TX
-  // 2..6 - USR2..USR6
-  // Set USER_OUT to 1 to read from USER_IN.
-  input   [6:0] USER_IN,
-  output  [6:0] USER_OUT
+	input         CLK_AUDIO, // 24.576 MHz
+	output [15:0] AUDIO_L,
+	output [15:0] AUDIO_R,
+	output        AUDIO_S,   // 1 - signed audio samples, 0 - unsigned
+	output  [1:0] AUDIO_MIX, // 0 - no mix, 1 - 25%, 2 - 50%, 3 - 100% (mono)
+
+	//ADC
+	inout   [3:0] ADC_BUS,
+
+	//SD-SPI
+	output        SD_SCK,
+	output        SD_MOSI,
+	input         SD_MISO,
+	output        SD_CS,
+	input         SD_CD,
+
+	//High latency DDR3 RAM interface
+	//Use for non-critical time purposes
+	output        DDRAM_CLK,
+	input         DDRAM_BUSY,
+	output  [7:0] DDRAM_BURSTCNT,
+	output [28:0] DDRAM_ADDR,
+	input  [63:0] DDRAM_DOUT,
+	input         DDRAM_DOUT_READY,
+	output        DDRAM_RD,
+	output [63:0] DDRAM_DIN,
+	output  [7:0] DDRAM_BE,
+	output        DDRAM_WE,
+
+	//SDRAM interface with lower latency
+	output        SDRAM_CLK,
+	output        SDRAM_CKE,
+	output [12:0] SDRAM_A,
+	output  [1:0] SDRAM_BA,
+	inout  [15:0] SDRAM_DQ,
+	output        SDRAM_DQML,
+	output        SDRAM_DQMH,
+	output        SDRAM_nCS,
+	output        SDRAM_nCAS,
+	output        SDRAM_nRAS,
+	output        SDRAM_nWE,
+
+`ifdef MISTER_DUAL_SDRAM
+	//Secondary SDRAM
+	//Set all output SDRAM_* signals to Z ASAP if SDRAM2_EN is 0
+	input         SDRAM2_EN,
+	output        SDRAM2_CLK,
+	output [12:0] SDRAM2_A,
+	output  [1:0] SDRAM2_BA,
+	inout  [15:0] SDRAM2_DQ,
+	output        SDRAM2_nCS,
+	output        SDRAM2_nCAS,
+	output        SDRAM2_nRAS,
+	output        SDRAM2_nWE,
+`endif
+
+	input         UART_CTS,
+	output        UART_RTS,
+	input         UART_RXD,
+	output        UART_TXD,
+	output        UART_DTR,
+	input         UART_DSR,
+
+	// Open-drain User port.
+	// 0 - D+/RX
+	// 1 - D-/TX
+	// 2..6 - USR2..USR6
+	// Set USER_OUT to 1 to read from USER_IN.
+	input   [6:0] USER_IN,
+	output  [6:0] USER_OUT,
+
+	input         OSD_STATUS
 );
 
+///////// Default values for ports not used in this core /////////
+
+assign ADC_BUS  = 'Z;
+assign USER_OUT = '1;
+assign {UART_RTS, UART_TXD, UART_DTR} = 0;
+assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
+assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
+
 assign VGA_F1 = 0;
-assign USER_OUT  = '1;
+assign VGA_SCALER = 0;
+assign AUDIO_MIX = 0;
+
 assign LED_USER  = ioctl_download;
-assign LED_DISK  = 0;
+assign LED_DISK = 0;
 assign LED_POWER = 0;
+assign BUTTONS = 0;
+
+assign FB_FORCE_BLANK = 0;
 
 assign VIDEO_ARX = status[1] ? 8'd16 : status[2] ? 8'd3 : 8'd4;
 assign VIDEO_ARY = status[1] ? 8'd9  : status[2] ? 8'd4 : 8'd3;
@@ -125,6 +208,7 @@ localparam CONF_STR = {
    "O2,Orientation,Horz,Vert;",
    "O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
    "ODG,Analogue Sound Vol,100%,Off,10%,20%,30%,40%,50%,60%,70%,80%,90%,;",
+   "O6,Pause when OSD is open,On,Off;",
    "-;",
    "DIP;",
    //"O89,Lives,3,4,5,6;",
@@ -134,8 +218,8 @@ localparam CONF_STR = {
    "-;",
 
    "R0,Reset;",
-   "J1,Jump,Start 1P,Start 2P;",
-   "jn,A,Start,Select,R;",
+   "J1,Jump,Start 1P,Start 2P,Pause;",
+   "jn,A,Start,Select,R,L;",
    "V,v",`BUILD_DATE
 };
 
@@ -158,10 +242,12 @@ wire        forced_scandoubler;
 wire        direct_video;
 
 wire        ioctl_download;
+wire        ioctl_upload;
+wire  [7:0] ioctl_index;
 wire        ioctl_wr;
 wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
-wire  [7:0] ioctl_index;
+wire  [7:0] ioctl_din;
 
 wire [10:0] ps2_key;
 
@@ -184,9 +270,11 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
    .status_menumask(direct_video),
 
    .ioctl_download(ioctl_download),
+   .ioctl_upload(ioctl_upload),
    .ioctl_wr(ioctl_wr),
    .ioctl_addr(ioctl_addr),
    .ioctl_dout(ioctl_dout),
+   .ioctl_din(ioctl_din),
    .ioctl_index(ioctl_index),
 
    .joystick_0(joy_0),
@@ -267,6 +355,35 @@ wire m_fire_2 = btn_fire_2 | joy_1[4];
 wire m_start1 = btn_one_player  | joy_0[5] | joy_1[5];
 wire m_start2 = btn_two_players | joy_0[6] | joy_1[6];
 wire m_coin   = joy_0[7] | joy_1[7];
+wire m_pause   = joy_0[8] | joy_1[8];
+
+// PAUSE SYSTEM
+reg				pause;									// Pause signal (active-high)
+reg				pause_toggle = 1'b0;					// User paused (active-high)
+reg [31:0]		pause_timer;							// Time since pause
+reg [31:0]		pause_timer_dim = 31'h1C9C3800;	// Time until screen dim (10 seconds @ 48Mhz)
+reg 				dim_video;								// Dim video output (active-high)
+
+// Pause when highscore module requires access, user has pressed pause, or OSD is open and option is set
+assign pause = hs_access | pause_toggle  | (OSD_STATUS && ~status[7]);
+assign dim_video = (pause_timer >= pause_timer_dim) ? 1'b1 : 1'b0;
+
+always @(posedge clk_sys) begin
+	reg old_pause;
+	old_pause <= m_pause;
+	if(~old_pause & m_pause) pause_toggle <= ~pause_toggle;
+	if(pause)
+	begin
+		if(pause_timer<pause_timer_dim)
+		begin
+			pause_timer <= pause_timer + 1'b1;
+		end
+	end
+	else
+	begin
+		pause_timer <= 1'b0;
+	end
+end
 
 //wire [7:0]m_dip = status[15:8];
 reg [7:0] sw[8];
@@ -279,6 +396,7 @@ wire hblank, vblank;
 wire hs, vs;
 wire [2:0] r,g;
 wire [1:0] b;
+wire [7:0] rgb_out = dim_video ? {r >> 1,g >> 1, b >> 1} : {r,g,b};
 
 wire rotate_ccw = 1;
 wire no_rotate = ~status[2] | direct_video  ;
@@ -291,7 +409,7 @@ arcade_video#(256,8) arcade_video
    .clk_video(clk_sys),
    .ce_pix(ce_vid),
 
-   .RGB_in({r,g,b}),
+   .RGB_in(rgb_out),
    .HBlank(hblank),
    .VBlank(vblank),
    .HSync(~hs),
@@ -321,14 +439,17 @@ assign AUDIO_L   = audio;
 assign AUDIO_R   = audio;
 assign AUDIO_S   = 1'b1;
 
+wire rom_download = ioctl_download & !ioctl_index;
+wire reset = (RESET | status[0] | buttons[1] | ioctl_download);
+
 mario_top mariobros
 (
    .I_CLK_48M(clk_sys),
-   .I_RESETn(~(RESET | status[0] | buttons[1])),
+   .I_RESETn(~reset),
 
    .dn_addr(ioctl_addr),
    .dn_data(ioctl_dout),
-   .dn_wr(ioctl_wr && ioctl_index==0),
+   .dn_wr(ioctl_wr && rom_download),
 
    .O_PIX(clk_pix),
 
@@ -346,7 +467,44 @@ mario_top mariobros
    .O_HBLANK(hbl0),
    .O_VBLANK(vblank),
 
-   .O_SOUND_DAT(audio)
+   .O_SOUND_DAT(audio),
+
+   .pause(pause),
+
+   .hs_address(hs_address),
+   .hs_data_out(ioctl_din),
+   .hs_data_in(hs_data_in),
+   .hs_write(hs_write),
+   .hs_access(hs_access)
+
+);
+
+// HISCORE SYSTEM
+// --------------
+
+wire [15:0]hs_address;
+wire [7:0]hs_data_in;
+wire hs_write;
+wire hs_access;
+
+hiscore #(
+	.HS_ADDRESSWIDTH(16),
+	.CFG_ADDRESSWIDTH(3),
+	.CFG_LENGTHWIDTH(2)
+) hi (
+	.clk(clk_sys),
+	.reset(reset),
+	.ioctl_upload(ioctl_upload),
+	.ioctl_download(ioctl_download),
+	.ioctl_wr(ioctl_wr),
+	.ioctl_addr(ioctl_addr),
+	.ioctl_dout(ioctl_dout),
+	.ioctl_din(ioctl_din),
+	.ioctl_index(ioctl_index),
+	.ram_address(hs_address),
+	.data_to_ram(hs_data_in),
+	.ram_write(hs_write),
+	.ram_access(hs_access)
 );
 
 endmodule
