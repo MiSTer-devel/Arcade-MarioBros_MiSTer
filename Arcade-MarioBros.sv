@@ -365,7 +365,7 @@ reg [31:0]		pause_timer_dim = 31'h1C9C3800;	// Time until screen dim (10 seconds
 reg 				dim_video;								// Dim video output (active-high)
 
 // Pause when highscore module requires access, user has pressed pause, or OSD is open and option is set
-assign pause = hs_access | pause_toggle  | (OSD_STATUS && ~status[7]);
+assign pause = hs_access | pause_toggle  | (OSD_STATUS && ~status[6]);
 assign dim_video = (pause_timer >= pause_timer_dim) ? 1'b1 : 1'b0;
 
 always @(posedge clk_sys) begin
@@ -440,7 +440,7 @@ assign AUDIO_R   = audio;
 assign AUDIO_S   = 1'b1;
 
 wire rom_download = ioctl_download & !ioctl_index;
-wire reset = (RESET | status[0] | buttons[1] | ioctl_download);
+wire reset = (RESET | status[0] | buttons[1] | rom_download);
 
 mario_top mariobros
 (
