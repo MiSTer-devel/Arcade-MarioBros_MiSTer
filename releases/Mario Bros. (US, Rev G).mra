@@ -1,41 +1,58 @@
 <misterromdescription>
-  <name>Mario Bros. (US, Revision G)</name>
-  <mameversion>0220</mameversion>
-  <setname>mario</setname>
-  <mratimestamp>202006260000</mratimestamp>
-  <year>1983</year>
-  <manufacturer>Nintendo of America</manufacturer>
-  <category>Platform</category>
-  <category>Platform / Mario Bros.</category>
-  <rbf>MarioBros</rbf>
+	<name>Mario Bros.</name>
+	<region>USA</region>
+	<homebrew>no</homebrew>
+	<bootleg>no</bootleg>
+	<version>Rev G</version>
+	<alternative></alternative>
+	<platform></platform>
+	<series>Mario</series>
+	<year>1983</year>
+	<manufacturer>Nintendo</manufacturer>
+	<category>Platform - Climb</category>
 
-  <buttons names="Jump,Start 1P,Start 2P,Coin,Pause" default="A,Start,Select,R,L" />
+	<setname>mario</setname>
+	<parent>mario</parent>
+	<mameversion>0220</mameversion>
+	<rbf>mariobros</rbf>
+	<about></about>
 
-  <switches default="0">
-    <dip bits="0,1" name="Lives" ids="3,4,5,6"/>
-    <dip bits="2,3" name="Coin/Credit" ids="1/1,2/1,1/2,1/3"/>
-    <dip bits="4,5" name="Extra Life" ids="20k,30k,40k,None"/>
-    <dip bits="6,7" name="Difficulty" ids="1 Easy,Medium,Hard,Hardest"/>
-  </switches>
+	<resolution>15kHz</resolution>
+	<rotation>horizontal</rotation>
+	<flip></flip>
 
-  <rom index="0" zip="mario.zip" md5="267acf55988daa5ffda65cd58c268f64">
-        <part crc="c0c6e014" name="tma1-c-7f_g.7f"/>
-        <part crc="116b3856" name="tma1-c-7e_g.7e"/>
-        <part crc="dcceb6c1" name="tma1-c-7d_g.7d"/>
-        <part crc="28b0c42c" name="tma1-v-3f.3f"/>
-        <part crc="0c8cc04d" name="tma1-v-3j.3j"/>
-        <part crc="4a63d96b" name="tma1-c-7c_g.7c"/>
-        <part crc="22b7372e" name="tma1-v-7m.7m"/>
-        <part crc="4f3a1f47" name="tma1-v-7n.7n"/>
-        <part crc="56be6ccd" name="tma1-v-7p.7p"/>
-        <part crc="56f1d613" name="tma1-v-7s.7s"/>
-        <part crc="641f0008" name="tma1-v-7t.7t"/>
-        <part crc="7baf5309" name="tma1-v-7u.7u"/>
-        <part crc="06b9ff85" name="tma1-c-6k_e.6k"/>
-        <part crc="afc9bd41" name="tma1-c-4p.4p"/>
-        <part crc="58d86098" name="tma1-c-5p.5p"/>
-        <part repeat="3552" >00</part>
-      <part>
+	<players>2 (simultaneous)</players>
+	<joystick>2-way horizontal</joystick>
+	<special_controls></special_controls>
+	<num_buttons>1</num_buttons>
+	<buttons default="A,Start,Select,R,L" names="Jump,Start 1P,Start 2P,Coin,Pause"></buttons>
+
+	<switches default="0">
+		<dip bits="0,1" ids="3,4,5,6" name="Lives"></dip>
+		<dip bits="2,3" ids="1/1,2/1,1/2,1/3" name="Coin/Credit"></dip>
+		<dip bits="4,5" ids="20k,30k,40k,None" name="Extra Life"></dip>
+		<dip bits="6,7" ids="1 Easy,Medium,Hard,Hardest" name="Difficulty"></dip>
+		</switches>
+
+	<rom index="1"></rom>
+	<rom index="0" md5="267acf55988daa5ffda65cd58c268f64" zip="mario.zip">
+		<part crc="c0c6e014" name="tma1-c-7f_g.7f"></part>
+		<part crc="116b3856" name="tma1-c-7e_g.7e"></part>
+		<part crc="dcceb6c1" name="tma1-c-7d_g.7d"></part>
+		<part crc="28b0c42c" name="tma1-v-3f.3f"></part>
+		<part crc="0c8cc04d" name="tma1-v-3j.3j"></part>
+		<part crc="4a63d96b" name="tma1-c-7c_g.7c"></part>
+		<part crc="22b7372e" name="tma1-v-7m.7m"></part>
+		<part crc="4f3a1f47" name="tma1-v-7n.7n"></part>
+		<part crc="56be6ccd" name="tma1-v-7p.7p"></part>
+		<part crc="56f1d613" name="tma1-v-7s.7s"></part>
+		<part crc="641f0008" name="tma1-v-7t.7t"></part>
+		<part crc="7baf5309" name="tma1-v-7u.7u"></part>
+		<part crc="06b9ff85" name="tma1-c-6k_e.6k"></part>
+		<part crc="afc9bd41" name="tma1-c-4p.4p"></part>
+		<part crc="58d86098" name="tma1-c-5p.5p"></part>
+		<part repeat="3552">00</part>
+		<part>
 d8 ff d6 ff ea ff ef ff 15 00 d3 ff 23 00 6f ff
 ba ff 2a 00 e6 ff dc ff 7c ff 6c ff 09 ff 1a ff
 aa fe a0 fe ac fe c6 fe 66 fe ca fe 5a fe df fe
@@ -804,8 +821,9 @@ ff ff 01 00 fe ff 02 00 ff ff 01 00 ff ff 00 00
 04 00 fe ff ff ff 02 00 fe ff 03 00 fd ff 01 00
 00 00 00 00 00 00 00 00 ff ff 02 00 fe ff 01 00
 00 00 ff ff 02 00 fd ff 03 00 fe ff 01 00 ff ff
-      </part>
-  </rom>
+      	</part>
+		</rom>
+	<rom index="2"></rom>
 	<rom index="3" md5="none">
 		<part>
 		00 FF FF FF 00 FF 00 02 00 02 00 01 00 FF 00 00
@@ -813,6 +831,12 @@ ff ff 01 00 fe ff 02 00 ff ff 01 00 ff ff 00 00
 		00 00 6C 00 00 3C 00 00
 		00 00 68 23 00 03 01 00
 		</part>
-	</rom>	
-	<nvram index="4" size="233"/>
+		</rom>
+	<rom index="4"></rom>
+
+	<nvram index="4" size="233"></nvram>
+
+	<remark></remark>
+
+	<mratimestamp>20210430005030</mratimestamp>
 </misterromdescription>
