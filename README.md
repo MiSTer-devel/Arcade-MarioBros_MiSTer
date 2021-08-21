@@ -1,5 +1,6 @@
 # [Arcade: Mario Bros](https://www.arcade-museum.com/game_detail.php?game_id=8624) for [MiSTer](https://github.com/MiSTer-devel/Main_MiSTer/wiki)
 
+Arcade: Mario Bros port to MiSTer by [gaz68](https://github.com/gaz68) - June 2020  
 Original Donkey Kong port to MiSTer by [Sorgelig](https://github.com/sorgelig) - 18 April 2018
 
 #### Sources
