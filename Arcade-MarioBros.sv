@@ -61,6 +61,7 @@ module emu
 
 	input  [11:0] HDMI_WIDTH,
 	input  [11:0] HDMI_HEIGHT,
+	output        HDMI_FREEZE,
 
 `ifdef MISTER_FB
 	// Use framebuffer in DDRAM (USE_FB=1 in qsf)
@@ -188,6 +189,7 @@ assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQM
 
 assign VGA_F1 = 0;
 assign VGA_SCALER = 0;
+assign HDMI_FREEZE = 0;
 assign AUDIO_MIX = 0;
 
 assign LED_USER  = ioctl_download;
@@ -254,13 +256,11 @@ wire [10:0] ps2_key;
 wire [15:0] joy_0, joy_1;
 wire [21:0] gamma_bus;
 
-hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
+hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
    .clk_sys(clk_sys),
    .HPS_BUS(HPS_BUS),
    .EXT_BUS(),
-   
-   .conf_str(CONF_STR),
 
    .buttons(buttons),
    .status(status),
