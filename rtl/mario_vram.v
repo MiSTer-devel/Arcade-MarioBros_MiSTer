@@ -161,7 +161,7 @@ assign W_2J_Qa = reg_2J[7];
 assign W_2J_Qh = reg_2J[0];
 
 always@(posedge I_CLK_48M) begin
-   if (I_CEN_24Mp) begin
+   if (I_CEN_24Mn) begin
       reg H_CNT0p;
       H_CNT0p <= I_H_CNT[0];
 
