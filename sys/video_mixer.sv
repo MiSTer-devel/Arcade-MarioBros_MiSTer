@@ -100,7 +100,6 @@ generate
 	end
 endgenerate
 
-
 wire hs_g, vs_g;
 wire hb_g, vb_g;
 wire [DWIDTH_SD:0] R_gamma, G_gamma, B_gamma;
