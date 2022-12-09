@@ -35,7 +35,7 @@ module emu
   input         RESET,
 
   //Must be passed to hps_io module
-  inout  [45:0] HPS_BUS,
+  inout  [48:0] HPS_BUS,
 
   //Base video clock. Usually equals to CLK_SYS.
   output        CLK_VIDEO,
@@ -58,6 +58,7 @@ module emu
 	output        VGA_F1,
 	output [1:0]  VGA_SL,
 	output        VGA_SCALER, // Force VGA scaler
+	output        VGA_DISABLE,
 
 	input  [11:0] HDMI_WIDTH,
 	input  [11:0] HDMI_HEIGHT,
@@ -185,6 +186,7 @@ assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 
 assign VGA_F1    = 0;
 assign VGA_SCALER= 0;
+assign VGA_DISABLE = 0;
 assign USER_OUT  = '1;
 assign LED_USER  = ioctl_download;
 assign LED_DISK  = 0;
@@ -239,6 +241,7 @@ pll pll
 wire [31:0] status;
 wire  [1:0] buttons;
 wire        forced_scandoubler;
+wire        video_rotated;
 wire        direct_video;
 
 wire        ioctl_download;
@@ -266,6 +269,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
    .forced_scandoubler(forced_scandoubler),
    .gamma_bus(gamma_bus),
    .direct_video(direct_video),
+   .video_rotated(video_rotated),
    .status_menumask({~hs_configured,direct_video}),
 
    .ioctl_download(ioctl_download),
@@ -381,6 +385,7 @@ wire [1:0] b;
 
 wire rotate_ccw = 1;
 wire no_rotate = ~status[2] | direct_video  ;
+wire flip = 0;
 screen_rotate screen_rotate (.*);
 
 arcade_video#(256,8) arcade_video
