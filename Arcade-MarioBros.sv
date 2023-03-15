@@ -27,22 +27,22 @@
 
 module emu
 (
-  //Master input clock
-  input         CLK_50M,
+	//Master input clock
+	input         CLK_50M,
 
-  //Async reset from top-level module.
-  //Can be used as initial reset.
-  input         RESET,
+	//Async reset from top-level module.
+	//Can be used as initial reset.
+	input         RESET,
 
-  //Must be passed to hps_io module
-  inout  [45:0] HPS_BUS,
+	//Must be passed to hps_io module
+	inout  [48:0] HPS_BUS,
 
-  //Base video clock. Usually equals to CLK_SYS.
-  output        CLK_VIDEO,
+	//Base video clock. Usually equals to CLK_SYS.
+	output        CLK_VIDEO,
 
-  //Multiple resolutions are supported using different CE_PIXEL rates.
-  //Must be based on CLK_VIDEO
-  output        CE_PIXEL,
+	//Multiple resolutions are supported using different CE_PIXEL rates.
+	//Must be based on CLK_VIDEO
+	output        CE_PIXEL,
 
 	//Video aspect ratio for HDMI. Most retro systems have ratio 4:3.
 	//if VIDEO_ARX[12] or VIDEO_ARY[12] is set then [11:0] contains scaled size instead of aspect ratio.
@@ -58,13 +58,14 @@ module emu
 	output        VGA_F1,
 	output [1:0]  VGA_SL,
 	output        VGA_SCALER, // Force VGA scaler
+	output        VGA_DISABLE, // analog out is off
 
 	input  [11:0] HDMI_WIDTH,
 	input  [11:0] HDMI_HEIGHT,
 	output        HDMI_FREEZE,
 
 `ifdef MISTER_FB
-	// Use framebuffer in DDRAM (USE_FB=1 in qsf)
+	// Use framebuffer in DDRAM
 	// FB_FORMAT:
 	//    [2:0] : 011=8bpp(palette) 100=16bpp 101=24bpp 110=32bpp
 	//    [3]   : 0=16bits 565 1=16bits 1555
@@ -193,9 +194,10 @@ assign BUTTONS   = 0;
 assign AUDIO_MIX = 0;
 assign HDMI_FREEZE = 0;
 assign FB_FORCE_BLANK = 0;
+assign VGA_DISABLE = 0;
 
-assign VIDEO_ARX = status[1] ? 8'd16 : status[2] ? 8'd3 : 8'd4;
-assign VIDEO_ARY = status[1] ? 8'd9  : status[2] ? 8'd4 : 8'd3;
+assign VIDEO_ARX = status[1] ? 8'd16 : status[2] ? 12'd2191 : 12'd2560;
+assign VIDEO_ARY = status[1] ? 8'd9  : status[2] ? 12'd2560 : 12'd2191;
 
 `include "build_id.v" 
 localparam CONF_STR = {
@@ -267,6 +269,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
    .gamma_bus(gamma_bus),
    .direct_video(direct_video),
    .status_menumask({~hs_configured,direct_video}),
+	.video_rotated(video_rotated),
 
    .ioctl_download(ioctl_download),
    .ioctl_upload(ioctl_upload),
@@ -381,6 +384,9 @@ wire [1:0] b;
 
 wire rotate_ccw = 1;
 wire no_rotate = ~status[2] | direct_video  ;
+
+wire flip = 0;
+wire video_rotated;
 screen_rotate screen_rotate (.*);
 
 arcade_video#(256,8) arcade_video
